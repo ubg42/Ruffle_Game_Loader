@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Fullscreen Flash with Ruffle</title>
+  <script src="https://unpkg.com/@ruffle-rs/ruffle"></script>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #111;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      color: white;
+      font-family: sans-serif;
+    }
+
+    #player {
+      width: 100vw;
+      height: 100vh;
+      max-width: 100vw;
+      max-height: 100vh;
+      display: none;
+    }
+
+    #fileInput {
+      background: #222;
+      border: 2px solid #444;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: 0.2s;
+      z-index: 2;
+    }
+
+    #fileInput:hover {
+      background: #333;
+      border-color: #666;
+    }
+
+    #disclaimer {
+      position: absolute;
+      bottom: 10px;
+      width: 100%;
+      text-align: center;
+      color: #aaa;
+      font-size: 0.8em;
+      font-style: italic;
+      user-select: none;
+    }
+  </style>
+</head>
+<body>
+  <input type="file" id="fileInput" accept=".swf">
+  <div id="player"></div>
+  <div id="disclaimer">*This web application is not endorsed by or affiliated with Ruffle</div>
+
+  <script>
+    window.RufflePlayer = window.RufflePlayer || {};
+    window.addEventListener("load", () => {
+      const fileInput = document.getElementById("fileInput");
+      const playerContainer = document.getElementById("player");
+      const disclaimer = document.getElementById("disclaimer");
+
+      fileInput.addEventListener("change", (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        // Create Ruffle player
+        const ruffle = window.RufflePlayer.newest();
+        const player = ruffle.createPlayer();
+        player.style.width = "100%";
+        player.style.height = "100%";
+
+        // Hide file input and disclaimer
+        fileInput.style.display = "none";
+        disclaimer.style.display = "none";
+        playerContainer.style.display = "block";
+
+        playerContainer.appendChild(player);
+
+        // Load SWF using a Blob URL so Ruffle shows its loading screen
+        const blobURL = URL.createObjectURL(file);
+        player.load(blobURL);
+
+        // Clean up Blob URL later
+        player.addEventListener("unload", () => {
+          URL.revokeObjectURL(blobURL);
+        });
+      });
+    });
+  </script>
+</body>
+</html>
