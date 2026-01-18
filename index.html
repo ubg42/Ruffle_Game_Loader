@@ -5,6 +5,7 @@
   <title>Ruffle Game Loader</title>
   <link rel="shortcut icon" href="Logo.png" type="image/png">
   <script src="https://unpkg.com/@ruffle-rs/ruffle"></script>
+
   <style>
     html, body {
       margin: 0;
@@ -24,23 +25,29 @@
     #player {
       width: 100vw;
       height: 100vh;
-      max-width: 100vw;
-      max-height: 100vh;
       display: none;
     }
 
-    #fileInput {
-      background: #222;
-      border: 2px solid #444;
-      color: white;
-      padding: 12px 20px;
-      border-radius: 10px;
-      cursor: pointer;
-      transition: 0.2s;
+    .controls {
+      display: flex;
+      gap: 10px;
       z-index: 2;
     }
 
-    #fileInput:hover {
+    input, button {
+      background: #222;
+      border: 2px solid #444;
+      color: white;
+      padding: 12px 16px;
+      border-radius: 10px;
+      transition: 0.2s;
+    }
+
+    input[type="text"] {
+      width: 260px;
+    }
+
+    input:hover, button:hover {
       background: #333;
       border-color: #666;
     }
@@ -57,47 +64,77 @@
     }
   </style>
 </head>
+
 <body>
-  <input type="file" id="fileInput" accept=".swf">
+  <div class="controls">
+    <input type="file" id="fileInput" accept=".swf">
+    <input type="text" id="urlInput" placeholder="Enter .swf URL">
+    <button id="loadUrl">Load URL</button>
+  </div>
+
   <div id="player"></div>
   <div id="disclaimer">*This web application is not endorsed by or affiliated with Ruffle</div>
 
   <script>
     window.RufflePlayer = window.RufflePlayer || {};
-    window.addEventListener("load", () => {
-      const fileInput = document.getElementById("fileInput");
+
+    function loadSWF(source) {
       const playerContainer = document.getElementById("player");
+      const controls = document.querySelector(".controls");
       const disclaimer = document.getElementById("disclaimer");
 
-      fileInput.addEventListener("change", (event) => {
-        const file = event.target.files[0];
-        if (!file) return;
+      const ruffle = window.RufflePlayer.newest();
+      const player = ruffle.createPlayer();
+      player.style.width = "100%";
+      player.style.height = "100%";
 
-        // Create Ruffle player
-        const ruffle = window.RufflePlayer.newest();
-        const player = ruffle.createPlayer();
-        player.style.width = "100%";
-        player.style.height = "100%";
+      controls.style.display = "none";
+      disclaimer.style.display = "none";
+      playerContainer.style.display = "block";
 
-        // Hide file input and disclaimer
-        fileInput.style.display = "none";
-        disclaimer.style.display = "none";
-        playerContainer.style.display = "block";
+      playerContainer.appendChild(player);
+      player.load(source);
+    }
 
-        playerContainer.appendChild(player);
+    // LOCAL FILE LOAD
+    document.getElementById("fileInput").addEventListener("change", e => {
+      const file = e.target.files[0];
+      if (!file || !file.name.toLowerCase().endsWith(".swf")) {
+        alert("Please select a .swf file");
+        return;
+      }
 
-        // Load SWF using a Blob URL so Ruffle shows its loading screen
-        const blobURL = URL.createObjectURL(file);
-        player.load(blobURL);
+      const blobURL = URL.createObjectURL(file);
+      loadSWF(blobURL);
+    });
 
-        // Clean up Blob URL later
-        player.addEventListener("unload", () => {
-          URL.revokeObjectURL(blobURL);
-        });
-      });
+    // URL LOAD (CORS SAFE)
+    document.getElementById("loadUrl").addEventListener("click", async () => {
+      const url = document.getElementById("urlInput").value.trim();
+
+      if (!url.toLowerCase().endsWith(".swf")) {
+        alert("URL must end with .swf");
+        return;
+      }
+
+      try {
+        const response = await fetch(
+          "https://cors.isomorphic-git.org/" + url
+        );
+
+        if (!response.ok) {
+          throw new Error("Fetch failed");
+        }
+
+        const blob = await response.blob();
+        const blobURL = URL.createObjectURL(blob);
+        loadSWF(blobURL);
+
+      } catch (err) {
+        alert("This SWF cannot be loaded (blocked or unavailable).");
+        console.error(err);
+      }
     });
   </script>
 </body>
 </html>
-
-
